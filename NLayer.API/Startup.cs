@@ -2,15 +2,24 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
+using NLayer.Core.Repositories;
+using NLayer.Core.Service;
+using NLayer.Core.UnitOfWorks;
+using NLayer.Data;
+using NLayer.Data.Repositories;
+using NLayer.Data.UnitOfWorks;
+using NLayer.Service.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using AutoMapper;
 
 namespace NLayer.API
 {
@@ -26,8 +35,33 @@ namespace NLayer.API
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            
+            services.AddAutoMapper(typeof(Startup));
+            
+            services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+            services.AddScoped(typeof(IService<>), typeof(Service.Services.Service<>));
+            services.AddScoped<ICategoryService, CategoryService>();
+            services.AddScoped<IProductService, ProductService>();
+
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+            services.AddDbContext<AppDbContext>(options =>
+            { 
+                options.UseSqlServer(Configuration
+                    ["ConnectionStrings:SqlConStr"].ToString(), o => 
+                    {
+                        o.MigrationsAssembly("NLayer.Data");
+
+                    });
+            });
+           
 
             services.AddControllers();
+            services.Configure<ApiBehaviorOptions>(options =>
+            {
+                options.SuppressModelStateInvalidFilter = true;
+            });
+
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "NLayer.API", Version = "v1" });
