@@ -20,6 +20,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using AutoMapper;
+using NLayer.API.Filters;
+using Microsoft.AspNetCore.Diagnostics;
+using NLayer.API.Dtos;
+using Microsoft.AspNetCore.Http;
+using Newtonsoft.Json;
 
 namespace NLayer.API
 {
@@ -37,7 +42,7 @@ namespace NLayer.API
         {
             
             services.AddAutoMapper(typeof(Startup));
-            
+            services.AddScoped<NotFoundFilter>();
             services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
             services.AddScoped(typeof(IService<>), typeof(Service.Services.Service<>));
             services.AddScoped<ICategoryService, CategoryService>();
@@ -56,10 +61,16 @@ namespace NLayer.API
             });
            
 
-            services.AddControllers();
+            services.AddControllers(o=> {
+
+                o.Filters.Add(new ValidationFilter());
+            }
+                
+                );
             services.Configure<ApiBehaviorOptions>(options =>
             {
                 options.SuppressModelStateInvalidFilter = true;
+
             });
 
             services.AddSwaggerGen(c =>
@@ -76,8 +87,29 @@ namespace NLayer.API
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "NLayer.API v1"));
+             
             }
 
+            app.UseExceptionHandler(config =>
+            {
+                config.Run(async context =>
+                {
+                    context.Response.StatusCode = 500;
+                    context.Response.ContentType = "application/json";
+                    var error = context.Features.Get<IExceptionHandlerFeature>();
+
+                    if (error != null)
+                    {
+                        var ex = error.Error;
+                        ErrorDto errorDto = new ErrorDto();
+                        errorDto.Status = 500;
+                        errorDto.Errors.Add(ex.Message);
+                        await context.Response.WriteAsync(JsonConvert.SerializeObject(errorDto));
+                    }
+
+                });
+
+            });
             app.UseHttpsRedirection();
 
             app.UseRouting();

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using NLayer.API.Dtos;
@@ -11,15 +12,15 @@ namespace NLayer.API.Filters
 {
     public class ValidationFilter:ActionFilterAttribute
     {
-        public override void OnActionExecuted(ActionExecutedContext context)
+        public override void OnActionExecuting(ActionExecutingContext context)
         {
-            if(!context.ModelState.IsValid)
+            if (!context.ModelState.IsValid)
             {
                 ErrorDto errorDto = new ErrorDto();
 
                 errorDto.Status = 400;
 
-                IEnumerable <ModelError> modelErrors= 
+                IEnumerable<ModelError> modelErrors =
                     context.ModelState.Values.SelectMany(v => v.Errors);
 
                 modelErrors.ToList().ForEach(x =>
@@ -28,8 +29,8 @@ namespace NLayer.API.Filters
                 });
 
                 context.Result = new BadRequestObjectResult(errorDto);
-                 
-            }
+
+            };
         }
 
     }
